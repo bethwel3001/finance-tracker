@@ -22,13 +22,14 @@ def display_menu():
     print("8. Exit")
     print("="*50)
 
-def get_user_input(prompt, input_type=str):
+def get_user_input(prompt, input_type=str, min_value=None):
     """
     Get validated user input with error handling
     
     Args:
         prompt (str): The prompt to display to user
         input_type (type): Expected data type (str, int, float)
+        min_value: Minimum allowed value for numeric inputs
     
     Returns:
         User input in the specified type
@@ -37,38 +38,33 @@ def get_user_input(prompt, input_type=str):
         try:
             user_input = input(prompt)
             if input_type == str:
-                return user_input
+                if not user_input.strip():
+                    print(" Input cannot be empty!")
+                    continue
+                return user_input.strip()
             elif input_type == int:
-                return int(user_input)
+                value = int(user_input)
+                if min_value is not None and value < min_value:
+                    print(f" Value must be at least {min_value}!")
+                    continue
+                return value
             elif input_type == float:
-                return float(user_input)
+                value = float(user_input)
+                if min_value is not None and value <= min_value:
+                    print(f" Value must be greater than {min_value}!")
+                    continue
+                return value
         except ValueError:
             print(f" Invalid input! Please enter a valid {input_type.__name__}.")
 
-def add_transaction_flow(finance_manager):
+def add_transaction_flow(finance_manager, transaction_type):
     """Handle the transaction addition workflow"""
-    print("\n--- Add New Transaction ---")
+    print(f"\n--- Add New {transaction_type.capitalize()} Transaction ---")
     
     # Get transaction details with validation
-    amount = get_user_input("Enter amount: ", float)
+    amount = get_user_input("Enter amount: $", float, min_value=0)
     description = get_user_input("Enter description: ", str)
     category = get_user_input("Enter category: ", str)
-    
-    # Transaction type selection with loop until valid choice
-    while True:
-        print("\nTransaction Type:")
-        print("1. Income")
-        print("2. Expense")
-        choice = get_user_input("Select type (1-2): ", int)
-        
-        if choice == 1:
-            transaction_type = "income"
-            break
-        elif choice == 2:
-            transaction_type = "expense"
-            break
-        else:
-            print(" Invalid choice! Please select 1 or 2.")
     
     # Create and add transaction
     transaction = Transaction(amount, description, category, transaction_type)
@@ -84,7 +80,7 @@ def search_transactions_flow(finance_manager):
     print("2. Description")
     print("3. Amount Range")
     
-    choice = get_user_input("Select search option (1-3): ", int)
+    choice = get_user_input("Select search option (1-3): ", int, min_value=1)
     
     if choice == 1:
         category = get_user_input("Enter category to search: ", str)
@@ -93,8 +89,8 @@ def search_transactions_flow(finance_manager):
         description = get_user_input("Enter description to search: ", str)
         results = finance_manager.search_by_description(description)
     elif choice == 3:
-        min_amount = get_user_input("Enter minimum amount: ", float)
-        max_amount = get_user_input("Enter maximum amount: ", float)
+        min_amount = get_user_input("Enter minimum amount: $", float, min_value=0)
+        max_amount = get_user_input("Enter maximum amount: $", float, min_value=min_amount)
         results = finance_manager.search_by_amount_range(min_amount, max_amount)
     else:
         print(" Invalid choice!")
@@ -119,14 +115,14 @@ def main():
     while True:
         try:
             display_menu()
-            choice = get_user_input("\nEnter your choice (1-8): ", int)
+            choice = get_user_input("\nEnter your choice (1-8): ", int, min_value=1)
             
             # Control structure for menu options
             if choice == 1:
-                add_transaction_flow(finance_manager)
+                add_transaction_flow(finance_manager, "income")
                 
             elif choice == 2:
-                add_transaction_flow(finance_manager)
+                add_transaction_flow(finance_manager, "expense")
                 
             elif choice == 3:
                 print("\n--- All Transactions ---")
@@ -137,7 +133,7 @@ def main():
                 finance_manager.display_summary()
                 
             elif choice == 5:
-                limit = get_user_input("Enter monthly budget limit: ", float)
+                limit = get_user_input("Enter monthly budget limit: $", float, min_value=0)
                 budget.set_monthly_limit(limit)
                 print(f" Monthly budget set to ${limit:.2f}")
                 
@@ -157,14 +153,14 @@ def main():
                 break
                 
             else:
-                print(" Invalid choice! Please select 1-8.")
+                print("❌ Invalid choice! Please select 1-8.")
                 
         except KeyboardInterrupt:
-            print("\n\n  Program interrupted by user!")
+            print("\n\n⚠️  Program interrupted by user!")
             finance_manager.save_to_file()
             sys.exit(1)
         except Exception as e:
-            print(f" An error occurred: {e}")
+            print(f"❌ An error occurred: {e}")
             # Debugging information
             print(f"Debug info: Error type - {type(e).__name__}")
 
@@ -176,4 +172,4 @@ if __name__ == "__main__":
     main()
     
     end_time = time.time()
-    print(f"\n  Program execution time: {end_time - start_time:.2f} seconds")
+    print(f"\n⏱  Program execution time: {end_time - start_time:.2f} seconds")
