@@ -1,0 +1,6 @@
+# Personal Finance Tracker Requirements
+# No external dependencies for simplicity
+
+# Future enhancements could include:
+# matplotlib==3.5.0  # For charts and graphs
+# pandas==1.4.0      # For data analysis
