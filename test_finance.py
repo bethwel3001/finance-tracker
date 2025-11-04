@@ -87,15 +87,15 @@ class TestPerformance(unittest.TestCase):
     """Performance testing for finance operations"""
     
     def test_transaction_performance(self):
-        """Test performance with multiple transactions"""
+        """Test performance with multiple transactions - FIXED"""
         import time
         
         manager = FinanceManager()
         
-        # Add multiple transactions
+        # Add multiple transactions - START FROM 1, NOT 0 (amount must be positive)
         start_time = time.time()
         
-        for i in range(100):
+        for i in range(1, 101):  # From 1 to 100
             transaction = Transaction(float(i), f"Test {i}", "Category", "income")
             manager.add_transaction(transaction)
         
