@@ -6,6 +6,7 @@ Demonstrating OOP principles: Classes, Objects, Inheritance
 from datetime import datetime
 import json
 import os
+import csv
 
 class Transaction:
     """
@@ -13,7 +14,7 @@ class Transaction:
     Demonstrates encapsulation and basic OOP principles
     """
     
-    def __init__(self, amount, description, category, transaction_type):
+    def __init__(self, amount, description, category, transaction_type, timestamp=None):
         """
         Initialize a transaction with validation
         
@@ -22,6 +23,7 @@ class Transaction:
             description (str): Transaction description
             category (str): Transaction category
             transaction_type (str): 'income' or 'expense'
+            timestamp (datetime): Optional timestamp for loading from storage
         """
         # Data validation
         if amount <= 0:
@@ -34,7 +36,7 @@ class Transaction:
         self._description = description
         self._category = category
         self._type = transaction_type
-        self._timestamp = datetime.now()
+        self._timestamp = timestamp if timestamp else datetime.now()
     
     # Getter methods (property access)
     @property
@@ -71,8 +73,18 @@ class Transaction:
             'description': self._description,
             'category': self._category,
             'type': self._type,
-            'timestamp': self._timestamp.isoformat()
+            'timestamp': self._timestamp.isoformat()  # Convert to ISO format string
         }
+    
+    def to_csv_row(self):
+        """Convert transaction to CSV row format"""
+        return [
+            self._timestamp.isoformat(),
+            self._type,
+            self._amount,
+            self._category,
+            self._description
+        ]
 
 
 class RecurringTransaction(Transaction):
@@ -81,15 +93,16 @@ class RecurringTransaction(Transaction):
     Demonstrates inheritance and polymorphism
     """
     
-    def __init__(self, amount, description, category, transaction_type, frequency):
+    def __init__(self, amount, description, category, transaction_type, frequency, timestamp=None):
         """
         Initialize recurring transaction
         
         Args:
             frequency (str): 'daily', 'weekly', 'monthly'
+            timestamp (datetime): Optional timestamp for loading from storage
         """
         # Call parent class constructor
-        super().__init__(amount, description, category, transaction_type)
+        super().__init__(amount, description, category, transaction_type, timestamp)
         
         if frequency not in ['daily', 'weekly', 'monthly']:
             raise ValueError("Frequency must be 'daily', 'weekly', or 'monthly'")
@@ -107,7 +120,12 @@ class RecurringTransaction(Transaction):
             return self._timestamp + timedelta(weeks=1)
         elif self._frequency == 'monthly':
             # Simple monthly calculation
-            return self._timestamp.replace(month=self._timestamp.month + 1)
+            next_month = self._timestamp.month + 1
+            next_year = self._timestamp.year
+            if next_month > 12:
+                next_month = 1
+                next_year += 1
+            return self._timestamp.replace(year=next_year, month=next_month)
     
     @property
     def frequency(self):
@@ -121,6 +139,12 @@ class RecurringTransaction(Transaction):
         """Polymorphism - override parent's string method"""
         base_str = super().__str__()
         return f"{base_str} [Recurring: {self._frequency}]"
+    
+    def to_csv_row(self):
+        """Override CSV method to include frequency"""
+        row = super().to_csv_row()
+        row.append(self._frequency)
+        return row
 
 
 class FinanceManager:
@@ -129,7 +153,7 @@ class FinanceManager:
     Demonstrates composition and class relationships
     """
     
-    def __init__(self, data_file="transactions.json"):
+    def __init__(self, data_file="transactions.csv"):
         self._transactions = []
         self._data_file = data_file
         self._load_from_file()
@@ -197,31 +221,50 @@ class FinanceManager:
         return [t for t in self._transactions if min_amount <= t.amount <= max_amount]
     
     def _load_from_file(self):
-        """Load transactions from JSON file"""
+        """Load transactions from CSV file"""
         if os.path.exists(self._data_file):
             try:
-                with open(self._data_file, 'r') as f:
-                    data = json.load(f)
-                    for item in data:
-                        # Recreate transaction objects from dictionary
-                        transaction = Transaction(
-                            item['amount'],
-                            item['description'],
-                            item['category'],
-                            item['type']
-                        )
+                with open(self._data_file, 'r', newline='') as f:
+                    reader = csv.reader(f)
+                    headers = next(reader, None)  # Skip header row
+                    
+                    for row in reader:
+                        # Recreate transaction objects from CSV data
+                        timestamp = datetime.fromisoformat(row[0])
+                        transaction_type = row[1]
+                        amount = float(row[2])
+                        category = row[3]
+                        description = row[4]
+                        
+                        # Check if it's a recurring transaction
+                        if len(row) > 5 and row[5]:  # Has frequency field
+                            frequency = row[5]
+                            transaction = RecurringTransaction(
+                                amount, description, category, transaction_type, frequency, timestamp
+                            )
+                        else:
+                            transaction = Transaction(
+                                amount, description, category, transaction_type, timestamp
+                            )
+                        
                         self._transactions.append(transaction)
-                print(f" Loaded {len(self._transactions)} transactions from file.")
+                
+                print(f" Loaded {len(self._transactions)} transactions from CSV file.")
             except Exception as e:
                 print(f" Error loading data: {e}")
     
     def save_to_file(self):
-        """Save transactions to JSON file"""
+        """Save transactions to CSV file"""
         try:
-            data = [t.to_dict() for t in self._transactions]
-            with open(self._data_file, 'w') as f:
-                json.dump(data, f, indent=2)
-            print(f" Saved {len(self._transactions)} transactions to file.")
+            with open(self._data_file, 'w', newline='') as f:
+                writer = csv.writer(f)
+                # Write header row
+                writer.writerow(['timestamp', 'type', 'amount', 'category', 'description', 'frequency'])
+                
+                for transaction in self._transactions:
+                    writer.writerow(transaction.to_csv_row())
+            
+            print(f" Saved {len(self._transactions)} transactions to CSV file.")
         except Exception as e:
             print(f" Error saving data: {e}")
 
