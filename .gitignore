@@ -1,0 +1,16 @@
+# add sshkeys and sshkeys.pub
+sshkeys
+sshkeys.pub
+# ignore database files
+database.db
+# ignore virtual environment folder
+venv/
+# ignore compiled python files
+__pycache__/
+*.pyc
+# ignore log files
+logs/
+*.log
+# ignore IDE specific files
+.vscode/
+.idea/
